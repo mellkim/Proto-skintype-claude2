@@ -3,117 +3,554 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Genetic Skin Analysis (Safe Minimal)</title>
+    <title>Genetic Skin Analysis – Final</title>
+    <!-- Tailwind (CDN) → 경고는 개발용이라 정상입니다. -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React 18 UMD + Babel (브라우저 JSX 변환) -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   </head>
   <body class="bg-slate-50 min-h-screen">
-    <div id="root" class="p-6"></div>
+    <div id="root" class="p-4 md:p-6"></div>
 
     <script type="text/babel" data-presets="react">
-      // ✅ 안정적으로 동작하는 최소 버전으로 교체하여 먼저 화면이 뜨도록 합니다.
-      const { useState } = React;
+      /************ 공통 유틸 & 아이콘(이모지 대체) ************/
+      const { useState, useMemo } = React;
+      const Icon = ({ children, className = '' }) => (
+        <span className={'inline-block align-middle ' + className}>{children}</span>
+      );
+      const I = {
+        plus: (p)=> <Icon {...p}>＋</Icon>,
+        minus: (p)=> <Icon {...p}>−</Icon>,
+        up: (p)=> <Icon {...p}>📈</Icon>,
+        warn: (p)=> <Icon {...p}>⚠️</Icon>,
+        cal: (p)=> <Icon {...p}>📅</Icon>,
+        chevR: (p)=> <Icon {...p}>›</Icon>,
+        chart: (p)=> <Icon {...p}>📊</Icon>,
+        info: (p)=> <Icon {...p}>ℹ️</Icon>,
+        spark: (p)=> <Icon {...p}>✨</Icon>,
+        beaker: (p)=> <Icon {...p}>🧪</Icon>,
+        bag: (p)=> <Icon {...p}>🛍️</Icon>,
+        bulb: (p)=> <Icon {...p}>💡</Icon>,
+        close: (p)=> <Icon {...p}>✕</Icon>,
+      };
 
-      // 간단 아이콘(이모지)
-      const Icon = ({ children }) => <span className="inline-block align-middle">{children}</span>;
-
-      // 샘플 데이터 (간단화)
-      const REPORTS = [
-        { id: 'r1', date: '2025-09-02', week: 0, title: '초기 분석', overallScore: 78 },
-        { id: 'r2', date: '2025-08-05', week: 4, title: '4주차 추적', overallScore: 85 },
-        { id: 'r3', date: '2025-07-08', week: 8, title: '8주차 추적', overallScore: 82 },
+      /************ 데이터 ************/
+      const SAMPLE_REPORTS = [
+        { id: 'report_001', date: '2025-09-02', week: 0, title: '초기 분석', overallScore: 78, status: 'completed' },
+        { id: 'report_002', date: '2025-08-05', week: 4, title: '4주차 추적', overallScore: 85, status: 'completed' },
+        { id: 'report_003', date: '2025-07-08', week: 8, title: '8주차 추적', overallScore: 82, status: 'completed' },
       ];
 
-      function Card({ children, className = '' }) {
+      const BIOMARKER_DETAILS = {
+        PINK1: {
+          fullName: 'PINK1 (PTEN-induced kinase 1)',
+          function: '미토콘드리아 품질 관리 및 세포 에너지 대사를 조절하는 핵심 유전자입니다.',
+          mechanism: '손상된 미토콘드리아를 제거하는 마이토파지 과정을 조절하여 세포 건강을 유지합니다.',
+          ingredients: [
+            { name: '나이아신아마이드', description: '미토콘드리아 기능 향상', concentration: '2-5%' },
+            { name: '레티놀', description: '세포 재생 촉진', concentration: '0.25-1%' },
+          ],
+          products: ['더 오디너리 나이아신아마이드 10%', '로레알 레비탈리프트 나이트 세럼'],
+          tips: ['충분한 수면으로 세포 재생 시간 확보', '항산화 성분이 풍부한 식품 섭취'],
+        },
+        COL1A1: {
+          fullName: 'COL1A1 (Collagen Type I Alpha 1)',
+          function: '제1형 콜라겐의 주요 구성 성분을 생성. 피부 강도·탄력성 결정.',
+          mechanism: '콜라겐 섬유의 기본 구조를 만드는 α1 사슬을 암호화.',
+          ingredients: [{ name: '비타민 C', description: '콜라겐 합성 촉진', concentration: '10-20%' }],
+          products: ['CE페린 비타민C 세럼'],
+          tips: ['비타민 C 풍부한 과일, 채소 섭취'],
+        },
+        MSN: {
+          fullName: 'MSN (Moesin)',
+          function: '세포막의 구조적 안정성과 피부 장벽 기능 조절.',
+          mechanism: '세포막과 세포골격을 연결해 피부 세포의 형태 유지.',
+          ingredients: [{ name: '세라마이드', description: '세포막 강화', concentration: '2-5%' }],
+          products: ['CeraVe 모이스처라이징 크림'], tips: ['과도한 세안 피하기'],
+        },
+        HAS2: {
+          fullName: 'HAS2 (Hyaluronic Acid Synthase 2)',
+          function: '히알루론산 합성 → 피부 수분 보유 능력 결정.',
+          mechanism: '히알루론산을 생성하여 피부에 수분 공급.',
+          ingredients: [{ name: '히알루론산', description: '수분 공급', concentration: '0.5-2%' }],
+          products: ['더 오디너리 히알루론산 2% + B5'], tips: ['충분한 물 섭취'],
+        },
+        FLG: {
+          fullName: 'FLG (Filaggrin)',
+          function: '각질층의 보습 인자 생성 → 피부 장벽 유지.',
+          mechanism: '천연보습인자 원료가 되어 각질층 수분 유지.',
+          ingredients: [{ name: '우레아', description: '천연보습인자 보충', concentration: '5-10%' }],
+          products: ['유세린 UreaRepair 크림'], tips: ['미지근한 물로 짧게 샤워하기'],
+        },
+        AQP3: {
+          fullName: 'AQP3 (Aquaporin-3)',
+          function: '세포막의 수분 통로 역할.',
+          mechanism: '세포 내외 물 분자 이동 통로 제공.',
+          ingredients: [{ name: '글리세린', description: '수분 전달 촉진', concentration: '5-15%' }],
+          products: ['뉴트로지나 하이드라부스트 세럼'], tips: ['하루 2-3L 수분 섭취'],
+        },
+        SPINK5: {
+          fullName: 'SPINK5 (Serine Peptidase Inhibitor Kazal Type 5)',
+          function: '피부 장벽 보호 효소 억제제.',
+          mechanism: '세린 프로테아제 억제로 피부 장벽 유지.',
+          ingredients: [{ name: '알란토인', description: '피부 진정', concentration: '0.5-2%' }],
+          products: ['라로슈포제 톨레리안 케어'], tips: ['자극적인 성분 피하기'],
+        },
+        MLANA: {
+          fullName: 'MLANA (Melanoma Antigen)',
+          function: '멜라닌 생성과 색소 세포 기능 조절.',
+          mechanism: '멜라노사이트 성숙·멜라닌 합성 과정 관여.',
+          ingredients: [{ name: '비타민 C', description: '멜라닌 생성 억제', concentration: '10-20%' }],
+          products: ['클리니크 이븐 베터 세럼'], tips: ['매일 자외선 차단제 사용'],
+        },
+        TFAP2A: {
+          fullName: 'TFAP2A (Transcription Factor AP-2 Alpha)',
+          function: '색소 세포 발달·멜라닌 생성 조절 전사 인자.',
+          mechanism: '멜라노사이트 분화를 조절.',
+          ingredients: [{ name: '나이아신아마이드', description: '멜라닌 전달 억제', concentration: '5-10%' }],
+          products: ['더 오디너리 알파 아르부틴 2%'], tips: ['꾸준한 자외선 차단'],
+        },
+        SOD1: {
+          fullName: 'SOD1 (Superoxide Dismutase 1)',
+          function: '활성산소 제거 항산화 효소.',
+          mechanism: '활성산소를 안전한 물질로 변환 → 세포 손상 방지.',
+          ingredients: [{ name: '비타민 E', description: '항산화 시너지', concentration: '0.5-1%' }],
+          products: ['SkinCeuticals CE Ferulic'], tips: ['항산화 음식 섭취'],
+        },
+        VDR: {
+          fullName: 'VDR (Vitamin D Receptor)',
+          function: '비타민 D 작용 매개 → 피부 세포 조절.',
+          mechanism: '비타민 D와 결합해 세포 기능 조절.',
+          ingredients: [{ name: '비타민 D3', description: 'VDR 활성화', concentration: '1000-4000IU' }],
+          products: ['네이처메이드 비타민 D3'], tips: ['적당한 일광욕'],
+        },
+      };
+
+      const SAMPLE_CURRENT_DATA = {
+        userId: 'user123', analysisId: 'analysis456', timestamp: new Date(), week: 0,
+        biomarkers: {
+          aging: [
+            { gene: 'PINK1', value: -15, koreanMean: -10, stdDev: 8, name: '미토콘드리아 기능' },
+            { gene: 'COL1A1', value: 25, koreanMean: 15, stdDev: 12, name: '콜라겐 생성' },
+            { gene: 'MSN', value: -5, koreanMean: 0, stdDev: 6, name: '세포막 안정성' },
+            { gene: 'HAS2', value: 30, koreanMean: 20, stdDev: 10, name: '히알루론산 합성' },
+          ],
+          dryness: [
+            { gene: 'FLG', value: 40, koreanMean: 25, stdDev: 15, name: '필라그린' },
+            { gene: 'AQP3', value: -20, koreanMean: -15, stdDev: 8, name: '아쿠아포린-3' },
+            { gene: 'SPINK5', value: 10, koreanMean: 5, stdDev: 7, name: '세린 프로테아제 억제' },
+          ],
+          pigmentation: [
+            { gene: 'MLANA', value: -25, koreanMean: -20, stdDev: 9, name: '멜라닌 생성' },
+            { gene: 'TFAP2A', value: 15, koreanMean: 10, stdDev: 8, name: '전사인자 AP-2α' },
+            { gene: 'SOD1', value: -10, koreanMean: -5, stdDev: 6, name: '항산화 효소' },
+            { gene: 'VDR', value: 35, koreanMean: 20, stdDev: 12, name: '비타민D 수용체' },
+          ],
+        },
+      };
+
+      /************ 공통 UI ************/
+      function Card({ children, className = '', ...props }) {
+        const clickable = typeof props.onClick === 'function';
+        const base = 'bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 ';
         return (
-          <div className={"bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 " + className}>
+          <div
+            {...props}
+            className={base + className}
+            role={clickable ? 'button' : props.role}
+            tabIndex={clickable ? 0 : props.tabIndex}
+            onKeyDown={clickable ? (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); props.onClick?.(e);} } : props.onKeyDown}
+          >
             {children}
           </div>
         );
       }
 
-      function ReportsList({ onOpen }) {
+      /************ 하위 컴포넌트 ************/
+      function BiomarkerCard({ marker, onSelectGene }) {
+        const z = Math.abs((marker.value - marker.koreanMean) / marker.stdDev);
+        const status = z <= 1 ? 'normal' : z <= 2 ? 'warning' : 'critical';
+        const icon = status === 'normal' ? <I.minus className="w-4 h-4 text-emerald-500"/> : status === 'warning' ? <I.up className="w-4 h-4 text-amber-500"/> : <I.warn className="w-4 h-4 text-rose-500"/>;
+        const color = status === 'normal' ? 'border-emerald-200 from-emerald-50 to-cyan-50' : status === 'warning' ? 'border-amber-200 from-amber-50 to-orange-50' : 'border-rose-200 from-rose-50 to-pink-50';
+        const expressionLevel = Math.max(0, Math.min(100, (100 - marker.value) / 2));
         return (
-          <div className="space-y-4">
-            {REPORTS.map((r) => (
-              <Card key={r.id} className="p-6 hover:shadow-xl transition cursor-pointer" onClick={() => onOpen(r)}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center text-sm font-bold">{r.week}주</div>
-                    <div>
-                      <div className="font-bold text-slate-900 text-lg">{r.title}</div>
-                      <div className="text-slate-600 text-sm">{new Date(r.date).toLocaleDateString('ko-KR')}</div>
-                    </div>
+          <div className={`p-4 rounded-2xl border-2 bg-gradient-to-br ${color} transition-all duration-300 cursor-pointer hover:shadow-lg hover:scale-[1.02]`}
+               onClick={()=>onSelectGene?.(marker.gene)}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                {icon}
+                <span className="font-bold text-slate-800 text-sm tracking-wide">{marker.gene}</span>
+              </div>
+              <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full font-medium">ΔCt</span>
+            </div>
+            <div className="mb-3">
+              <span className="text-xl font-bold text-slate-900">{marker.value}</span>
+              <span className="text-xs text-slate-500 ml-2">(평균: {marker.koreanMean})</span>
+            </div>
+            <div className="text-xs text-slate-600 mb-3 font-medium">{marker.name}</div>
+            <div className="w-full bg-slate-200 rounded-full h-2.5">
+              <div className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2.5 rounded-full transition-all duration-1000" style={{ width: `${expressionLevel}%` }} />
+            </div>
+            <div className="text-xs text-slate-500 mt-2 text-center font-medium">발현 레벨: {Math.round(expressionLevel)}%</div>
+          </div>
+        );
+      }
+
+      function GeneDetailModal({ gene, onClose }) {
+        const d = BIOMARKER_DETAILS[gene];
+        if (!d) return null;
+        return (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-t-2xl p-6 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold">{gene}</h2>
+                  <p className="text-indigo-100 text-sm">{d.fullName}</p>
+                </div>
+                <button onClick={onClose} className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30">
+                  <I.close />
+                </button>
+              </div>
+              <div className="p-6 space-y-6">
+                <div>
+                  <h3 className="font-bold text-slate-800 mb-3 flex items-center text-lg"><I.beaker className="mr-2"/> 유전자 기능</h3>
+                  <p className="text-slate-700 leading-relaxed">{d.function}</p>
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 mb-3 text-lg">조절 기전</h3>
+                  <p className="text-slate-700 leading-relaxed">{d.mechanism}</p>
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 mb-3 flex items-center text-lg"><I.spark className="mr-2"/> 추천 화장품 성분</h3>
+                  <div className="space-y-3">
+                    {d.ingredients?.map((ig, i)=> (
+                      <div key={i} className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200">
+                        <div className="font-semibold text-amber-900">{ig.name}</div>
+                        <div className="text-amber-700 mt-1">{ig.description}</div>
+                        <div className="text-xs text-amber-600 mt-2 font-medium">권장 농도: {ig.concentration}</div>
+                      </div>
+                    ))}
                   </div>
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 mb-3 flex items-center text-lg"><I.bag className="mr-2"/> 추천 제품</h3>
+                  <div className="space-y-2">
+                    {d.products?.map((p,i)=> (
+                      <div key={i} className="p-3 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200">
+                        <div className="font-medium text-emerald-900">{p}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 mb-3 flex items-center text-lg"><I.bulb className="mr-2"/> 피부 관리 팁</h3>
+                  <div className="space-y-2">
+                    {d.tips?.map((t,i)=> (
+                      <div key={i} className="p-3 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl border border-yellow-200">
+                        <div className="text-yellow-800 flex items-start"><span className="w-1.5 h-1.5 rounded-full mt-2 mr-3">•</span>{t}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      /************ 뷰들 ************/
+      function ReportsListView({ reports, onOpenReport, onOpenComparison }) {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+            <div className="max-w-4xl mx-auto p-4">
+              <Card className="p-6 mb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">🧬 피부 유전자 분석</h1>
+                    <p className="text-slate-600 mt-1">나의 분석 기록</p>
+                  </div>
+                  <button className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 hover:shadow-lg">
+                    <I.plus /> <span>새 분석</span>
+                  </button>
+                </div>
+              </Card>
+
+              <div className="space-y-4">
+                {reports.map((r)=> (
+                  <Card key={r.id} className="p-6 cursor-pointer hover:shadow-xl transition hover:scale-[1.01]" onClick={()=>onOpenReport(r)}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center">
+                          <span className="text-white font-bold text-sm">{r.week}주</span>
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-slate-900 text-lg">{r.title}</h3>
+                          <p className="text-slate-600 flex items-center mt-1">
+                            <I.cal className="mr-1"/> {new Date(r.date).toLocaleDateString('ko-KR')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-indigo-600">{r.overallScore}</div>
+                          <div className="text-xs text-slate-500 font-medium">종합점수</div>
+                        </div>
+                        <I.chevR className="text-slate-400"/>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
+              <div className="mt-8">
+                <Card className="p-6 text-center cursor-pointer hover:shadow-xl" onClick={onOpenComparison}>
+                  <div className="flex items-center justify-center gap-2">
+                    <I.chart className="text-indigo-600"/> <span className="font-semibold text-slate-800 text-lg">전체 히스토리 차트 보기</span>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function AnalysisResultView({ data, report, onBack, onOpenComparison, onOpenRecommendations, onOpenRoutine, onSelectGene }) {
+        const overallScore = report?.overallScore ?? 78;
+        const CategorySection = ({ title, markers, icon }) => (
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-2xl">{icon}</span>
+              <h3 className="text-xl font-bold text-slate-900 tracking-tight">{title}</h3>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {markers.map((m)=> (
+                <BiomarkerCard key={m.gene} marker={m} onSelectGene={onSelectGene} />
+              ))}
+            </div>
+          </div>
+        );
+
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+            <div className="max-w-4xl mx-auto p-4">
+              <Card className="p-6 mb-6">
+                <div className="flex items-center justify-between">
+                  <button onClick={onBack} className="flex items-center gap-2 text-slate-600 hover:text-slate-800">
+                    <span className="rotate-180"><I.chevR /></span> <span className="font-medium">리포트 목록</span>
+                  </button>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-indigo-600">{r.overallScore}</div>
-                    <div className="text-xs text-slate-500">종합점수</div>
+                    <h1 className="text-xl font-bold text-slate-900">분석 결과</h1>
+                    <p className="text-slate-600 text-sm">{new Date().toLocaleDateString('ko-KR')}</p>
                   </div>
                 </div>
               </Card>
-            ))}
+
+              <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-8 mb-8 text-white shadow-2xl">
+                <div className="text-center">
+                  <div className="text-6xl font-bold text-white mb-4 tracking-tight">{overallScore}</div>
+                  <div className="text-xl opacity-90 mb-2 font-medium">종합 유전자 점수</div>
+                  <div className="text-sm text-indigo-100">11개 바이오마커 기준</div>
+                  <div className="w-full bg-white/20 rounded-full h-4 mt-6">
+                    <div className="bg-gradient-to-r from-yellow-400 to-orange-400 h-4 rounded-full transition-all duration-1000" style={{ width: `${overallScore}%` }} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-8">
+                <CategorySection title="피부 노화" markers={data.biomarkers.aging} icon="⏳" />
+                <CategorySection title="피부 건조" markers={data.biomarkers.dryness} icon="💧" />
+                <CategorySection title="피부 색소" markers={data.biomarkers.pigmentation} icon="🎨" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mt-8">
+                <Card className="p-6 text-center cursor-pointer hover:shadow-xl" onClick={onOpenComparison}>
+                  <div className="flex items-center justify-center gap-2"><I.chart className="text-indigo-600"/> <span className="font-semibold text-slate-800">비교 차트</span></div>
+                </Card>
+                <Card className="p-6 text-center cursor-pointer bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-xl" onClick={onOpenRecommendations}>
+                  <div className="flex items-center justify-center gap-2"><I.info /> <span className="font-semibold">맞춤 추천</span></div>
+                </Card>
+              </div>
+
+              <div className="mt-4">
+                <Card className="p-6 text-center cursor-pointer bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-xl" onClick={onOpenRoutine}>
+                  <div className="flex items-center justify-center gap-2"><I.spark /> <span className="font-semibold">🧴 맞춤 루틴 빌더</span></div>
+                </Card>
+              </div>
+            </div>
           </div>
         );
       }
 
-      function AnalysisSimple({ report, onBack }) {
+      function ComparisonView({ onBack }) {
         return (
-          <div className="space-y-6">
-            <Card className="p-6 flex items-center justify-between">
-              <button onClick={onBack} className="text-slate-600 hover:text-slate-800 flex items-center gap-2">
-                <Icon>‹</Icon> <span>리포트 목록</span>
-              </button>
-              <div className="text-right">
-                <div className="text-xl font-bold text-slate-900">분석 결과</div>
-                <div className="text-slate-600 text-sm">{new Date().toLocaleDateString('ko-KR')}</div>
-              </div>
-            </Card>
-            <Card className="p-8 text-white bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600">
-              <div className="text-center">
-                <div className="text-6xl font-bold mb-2">{report?.overallScore ?? 0}</div>
-                <div className="opacity-90">종합 유전자 점수</div>
-              </div>
-            </Card>
-            <Card className="p-6">
-              <div className="font-medium text-slate-800">(데모) 카테고리/바이오마커 카드들은 이후 단계에서 추가됩니다.</div>
-            </Card>
+          <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+            <div className="max-w-4xl mx-auto p-4">
+              <Card className="p-6 mb-6">
+                <div className="flex items-center justify-between">
+                  <button onClick={onBack} className="flex items-center gap-2 text-slate-600">
+                    <span className="rotate-180"><I.chevR /></span> <span>뒤로</span>
+                  </button>
+                  <h1 className="text-xl font-bold text-slate-900">📊 비교 분석</h1>
+                </div>
+              </Card>
+
+              <Card className="p-8">
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">레이더 차트와 상세 비교 분석</h3>
+                <p className="text-slate-600 text-lg mb-6">11개 바이오마커의 종합 시각화와 한국인 평균 대비 분석을 제공합니다.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                    <h4 className="font-bold text-blue-800 mb-3">🎯 레이더 차트</h4>
+                    <ul className="text-sm text-blue-700 space-y-1">
+                      <li>• 11개 바이오마커 한눈에 보기</li>
+                      <li>• 카테고리별 세부 분석</li>
+                      <li>• 시각적 패턴 인식</li>
+                    </ul>
+                  </div>
+                  <div className="p-6 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200">
+                    <h4 className="font-bold text-emerald-800 mb-3">📈 진행도 추적</h4>
+                    <ul className="text-sm text-emerald-700 space-y-1">
+                      <li>• 시간별 변화 추이</li>
+                      <li>• 개선 효과 측정</li>
+                      <li>• 목표 달성률 확인</li>
+                    </ul>
+                  </div>
+                </div>
+              </Card>
+            </div>
           </div>
         );
       }
 
+      function RecommendationsView({ onBack }) {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+            <div className="max-w-4xl mx-auto p-4">
+              <Card className="p-6 mb-6">
+                <div className="flex items-center justify-between">
+                  <button onClick={onBack} className="flex items-center gap-2 text-slate-600">
+                    <span className="rotate-180"><I.chevR /></span> <span>뒤로</span>
+                  </button>
+                  <h1 className="text-xl font-bold text-slate-900">💡 맞춤 추천</h1>
+                </div>
+              </Card>
+
+              <Card className="p-8">
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">개인 맞춤 케어 추천</h3>
+                <p className="text-slate-600 text-lg mb-6">유전자 분석을 바탕으로 한 과학적 추천사항을 제공합니다.</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="p-6 bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl border border-rose-200">
+                    <h4 className="font-bold text-rose-800 mb-3">🚨 긴급 개선</h4>
+                    <p className="text-sm text-rose-700">즉시 관리가 필요한 유전자 집중 케어 가이드</p>
+                  </div>
+                  <div className="p-6 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200">
+                    <h4 className="font-bold text-amber-800 mb-3">⚠️ 주의 관찰</h4>
+                    <p className="text-sm text-amber-700">예방적 관리를 통한 상태 개선 방안</p>
+                  </div>
+                  <div className="p-6 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200">
+                    <h4 className="font-bold text-emerald-800 mb-3">✅ 현재 상태 유지</h4>
+                    <p className="text-sm text-emerald-700">좋은 상태를 지속하기 위한 관리 방법</p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+        );
+      }
+
+      function RoutineBuilderView({ onBack }) {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+            <div className="max-w-4xl mx-auto p-4">
+              <Card className="p-6 mb-6">
+                <div className="flex items-center justify-between">
+                  <button onClick={onBack} className="flex items-center gap-2 text-slate-600">
+                    <span className="rotate-180"><I.chevR /></span> <span>뒤로</span>
+                  </button>
+                  <h1 className="text-xl font-bold text-slate-900">🧴 맞춤 루틴 빌더</h1>
+                </div>
+              </Card>
+
+              <Card className="p-8">
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">AI 기반 스킨케어 루틴</h3>
+                <p className="text-slate-600 text-lg mb-6">유전자 분석 결과를 바탕으로 개인 맞춤 루틴을 자동 생성합니다.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="p-6 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-200">
+                    <h4 className="font-bold text-orange-800 mb-3">🌅 모닝 루틴</h4>
+                    <ul className="text-sm text-orange-700 space-y-2">
+                      <li>• 자외선 차단 중심</li>
+                      <li>• 항산화 성분 적용</li>
+                      <li>• 5-6단계 체계적 케어</li>
+                      <li>• 약 10분 소요</li>
+                    </ul>
+                  </div>
+                  <div className="p-6 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200">
+                    <h4 className="font-bold text-purple-800 mb-3">🌙 이브닝 루틴</h4>
+                    <ul className="text-sm text-purple-700 space-y-2">
+                      <li>• 재생과 회복 중심</li>
+                      <li>• 영양 공급 집중</li>
+                      <li>• 6-7단계 심화 케어</li>
+                      <li>• 약 15분 소요</li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="mt-8 p-6 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl border border-yellow-200">
+                  <h4 className="font-bold text-yellow-800 mb-3">⚠️ 제품 충돌 방지</h4>
+                  <p className="text-sm text-yellow-700">비타민 C·레티놀, 나이아신아마이드·AHA 등 성분 충돌 자동 감지와 안전 가이드를 제공합니다.</p>
+                </div>
+              </Card>
+            </div>
+          </div>
+        );
+      }
+
+      /************ App 루트 ************/
       function App() {
-        const [view, setView] = useState('list');
-        const [selected, setSelected] = useState(null);
+        const [view, setView] = useState('reports');
+        const [selectedReport, setSelectedReport] = useState(null);
+        const [selectedGene, setSelectedGene] = useState(null);
+        const reports = SAMPLE_REPORTS;
+        const data = SAMPLE_CURRENT_DATA;
 
         return (
-          <div className="max-w-3xl mx-auto py-6">
-            <Card className="p-6 mb-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-slate-900">🧬 피부 유전자 분석</div>
-                  <div className="text-slate-600">GitHub Pages 최소 가동 버전</div>
-                </div>
-                <a className="px-4 py-2 rounded-xl bg-indigo-600 text-white" href="#" onClick={(e)=>e.preventDefault()}>새 분석</a>
-              </div>
-            </Card>
-
-            {view === 'list' && (
-              <>
-                <ReportsList onOpen={(r)=>{ setSelected(r); setView('analysis'); }} />
-                <div className="mt-6">
-                  <Card className="p-6 text-center cursor-pointer hover:shadow-xl" onClick={()=>alert('히스토리 차트(데모)')}>
-                    <span className="font-semibold text-slate-800">전체 히스토리 차트 보기</span>
-                  </Card>
-                </div>
-              </>
+          <>
+            {view === 'reports' && (
+              <ReportsListView
+                reports={reports}
+                onOpenReport={(r)=>{ setSelectedReport(r); setView('analysis'); }}
+                onOpenComparison={()=> setView('comparison')}
+              />
             )}
 
             {view === 'analysis' && (
-              <AnalysisSimple report={selected} onBack={()=>setView('list')} />
+              <AnalysisResultView
+                data={data}
+                report={selectedReport}
+                onBack={()=> setView('reports')}
+                onOpenComparison={()=> setView('comparison')}
+                onOpenRecommendations={()=> setView('recommendations')}
+                onOpenRoutine={()=> setView('routine')}
+                onSelectGene={(g)=> setSelectedGene(g)}
+              />
             )}
-          </div>
+
+            {view === 'comparison' && (
+              <ComparisonView onBack={()=> setView('reports')} />
+            )}
+
+            {view === 'recommendations' && (
+              <RecommendationsView onBack={()=> setView('analysis')} />
+            )}
+
+            {view === 'routine' && (
+              <RoutineBuilderView onBack={()=> setView('analysis')} />
+            )}
+
+            {selectedGene && (
+              <GeneDetailModal gene={selectedGene} onClose={()=> setSelectedGene(null)} />
+            )}
+          </>
         );
       }
 
