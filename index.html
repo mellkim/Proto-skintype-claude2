@@ -26,7 +26,7 @@
     <div id="root"></div>
 
     <!-- 앱 코드: JSX를 그대로 사용. Babel이 브라우저에서 변환합니다. -->
-    <script type="text/babel">
+    <script type="text/babel" data-presets="react">
       const { useState } = React;
 
       // 아이콘 대체: lucide-react 대신 심플한 이모지/기호 컴포넌트
@@ -238,7 +238,7 @@
                 <div className="p-6 space-y-6">
                   <div>
                     <h3 className="font-bold text-slate-800 mb-3 flex items-center text-lg">
-                      <Beaker className="w-5 h-5 mr-2 text-indigo-600" />
+                      <Beaker className="w-5 h-5 mr-2" />
                       유전자 기능
                     </h3>
                     <p className="text-slate-700 leading-relaxed">{details.function}</p>
@@ -251,7 +251,7 @@
 
                   <div>
                     <h3 className="font-bold text-slate-800 mb-3 flex items-center text-lg">
-                      <Sparkles className="w-5 h-5 mr-2 text-amber-500" />
+                      <Sparkles className="w-5 h-5 mr-2" />
                       추천 화장품 성분
                     </h3>
                     <div className="space-y-3">
@@ -267,7 +267,7 @@
 
                   <div>
                     <h3 className="font-bold text-slate-800 mb-3 flex items-center text-lg">
-                      <ShoppingBag className="w-5 h-5 mr-2 text-emerald-600" />
+                      <ShoppingBag className="w-5 h-5 mr-2" />
                       추천 제품
                     </h3>
                     <div className="space-y-2">
@@ -281,14 +281,14 @@
 
                   <div>
                     <h3 className="font-bold text-slate-800 mb-3 flex items-center text-lg">
-                      <Lightbulb className="w-5 h-5 mr-2 text-yellow-500" />
+                      <Lightbulb className="w-5 h-5 mr-2" />
                       피부 관리 팁
                     </h3>
                     <div className="space-y-2">
                       {details.tips?.map((tip, index) => (
                         <div key={index} className="p-3 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl border border-yellow-200">
                           <div className="text-yellow-800 flex items-start">
-                            <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                            <span className="w-1.5 h-1.5 rounded-full mt-2 mr-3 flex-shrink-0">•</span>
                             {tip}
                           </div>
                         </div>
@@ -598,25 +598,10 @@
           </div>
         );
 
-        function AppRoot() {
-          return (
-            <>
-              {currentView === "reports" && <ReportsListView />}
-              {currentView === "analysis" && <AnalysisResultView />}
-              {currentView === "comparison" && <ComparisonView />}
-              {currentView === "recommendations" && <RecommendationsView />}
-              {currentView === "routine-builder" && <RoutineBuilderView />}
-              {selectedGene && (
-                <GeneDetailModal gene={selectedGene} onClose={() => setSelectedGene(null)} />
-              )}
-            </>
-          );
-        }
-
         // 루트 렌더링
         const root = ReactDOM.createRoot(document.getElementById("root"));
         root.render(<GeneticSkinAnalysisApp />);
-      }
+      
     </script>
   </body>
 </html>
